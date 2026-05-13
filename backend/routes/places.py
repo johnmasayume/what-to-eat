@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import Place
 from schemas import LookupOut, PlaceCreate, PlaceOut
-from services.google_places import lookup_place
+from services.place_lookup import lookup_place
 
 router = APIRouter(prefix="/api/places", tags=["places"])
 

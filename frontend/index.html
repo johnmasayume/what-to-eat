@@ -5,11 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>What to Eat?</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: { extend: { colors: { brand: { 500: '#f97316', 600: '#ea580c' } } } }
-    }
-  </script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -55,19 +50,12 @@
         </div>
 
         <div v-if="recommended" class="bg-white rounded-2xl shadow border border-gray-100 overflow-hidden mb-6">
-          <div v-if="recommended.photo_reference" class="h-48 bg-gray-100">
-            <img
-              :src="`${apiBase}/api/photos?ref=${recommended.photo_reference}`"
-              :alt="recommended.name"
-              class="w-full h-full object-cover"
-              @error="e => e.target.parentElement.style.display='none'"
-            />
-          </div>
+          <div class="h-32 bg-orange-50 flex items-center justify-center text-6xl">🍴</div>
           <div class="p-4">
             <div class="flex items-start justify-between gap-3">
               <div>
                 <h4 class="text-xl font-bold text-gray-800">{{ recommended.name }}</h4>
-                <p v-if="recommended.address" class="text-gray-400 text-sm mt-0.5">{{ recommended.address }}</p>
+                <p v-if="recommended.address" class="text-gray-400 text-sm mt-0.5 leading-snug">{{ recommended.address }}</p>
               </div>
               <div class="flex flex-col items-end gap-1 flex-shrink-0">
                 <span v-if="recommended.has_epp" class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium">EPP</span>
@@ -80,7 +68,8 @@
               <span class="font-semibold text-orange-600">RM {{ recommended.budget_min }} – {{ recommended.budget_max }}</span>
               <a :href="recommended.maps_url" target="_blank" class="text-blue-500 text-sm hover:underline">📍 Open Maps</a>
             </div>
-            <p class="text-gray-300 text-xs mt-2">Added by {{ recommended.submitted_by }}</p>
+            <p v-if="recommended.days_closed" class="text-gray-400 text-xs mt-1">Closed: {{ recommended.days_closed }}</p>
+            <p class="text-gray-300 text-xs mt-1">Added by {{ recommended.submitted_by }}</p>
           </div>
         </div>
 
@@ -91,22 +80,15 @@
 
         <!-- Open today list -->
         <div v-if="todayPlaces.length">
-          <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">All Open Today ({{ todayPlaces.length }})</h3>
+          <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+            All Open Today ({{ todayPlaces.length }})
+          </h3>
           <div class="space-y-2">
             <div
               v-for="place in todayPlaces" :key="place.id"
               class="bg-white rounded-xl border border-gray-100 p-3 flex items-center gap-3"
             >
-              <div class="w-14 h-14 rounded-lg overflow-hidden bg-orange-50 flex-shrink-0 flex items-center justify-center">
-                <img
-                  v-if="place.photo_reference"
-                  :src="`${apiBase}/api/photos?ref=${place.photo_reference}`"
-                  :alt="place.name"
-                  class="w-full h-full object-cover"
-                  @error="e => e.target.parentElement.innerHTML = '🍴'"
-                />
-                <span v-else class="text-xl">🍴</span>
-              </div>
+              <div class="w-12 h-12 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0 text-xl">🍴</div>
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-1.5">
                   <span class="font-semibold text-gray-800 truncate">{{ place.name }}</span>
@@ -151,7 +133,6 @@
       </div>
 
       <div v-if="loading.all" class="text-center py-16 text-gray-400">Loading...</div>
-
       <div v-else-if="filteredPlaces.length === 0" class="text-center py-16 text-gray-400">No places found.</div>
 
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -159,22 +140,13 @@
           v-for="place in filteredPlaces" :key="place.id"
           class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
         >
-          <div class="h-36 bg-orange-50 flex items-center justify-center overflow-hidden">
-            <img
-              v-if="place.photo_reference"
-              :src="`${apiBase}/api/photos?ref=${place.photo_reference}`"
-              :alt="place.name"
-              class="w-full h-full object-cover"
-              @error="e => { e.target.style.display='none'; e.target.nextElementSibling.style.display='flex' }"
-            />
-            <span class="text-4xl" :style="place.photo_reference ? 'display:none' : ''">🍴</span>
-          </div>
+          <div class="h-28 bg-orange-50 flex items-center justify-center text-5xl">🍴</div>
           <div class="p-3">
             <div class="flex items-start justify-between gap-1">
               <h4 class="font-semibold text-gray-800">{{ place.name }}</h4>
               <span v-if="place.has_epp" class="bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded-full flex-shrink-0">EPP</span>
             </div>
-            <p v-if="place.address" class="text-gray-400 text-xs mt-0.5 truncate">{{ place.address }}</p>
+            <p v-if="place.address" class="text-gray-400 text-xs mt-0.5 line-clamp-2">{{ place.address }}</p>
             <div class="flex items-center gap-2 mt-2 flex-wrap">
               <span class="text-orange-600 text-sm font-medium">RM {{ place.budget_min }}–{{ place.budget_max }}</span>
               <span :class="parkingBadge(place.parking_difficulty)" class="text-xs px-1.5 py-0.5 rounded-full">
@@ -199,7 +171,9 @@
 
         <!-- Maps URL + Lookup -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Google Maps Link <span class="text-red-400">*</span></label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Google Maps Link <span class="text-red-400">*</span>
+          </label>
           <div class="flex gap-2">
             <input
               v-model="form.maps_url" type="url"
@@ -214,25 +188,20 @@
             >{{ form.looking_up ? '...' : 'Lookup' }}</button>
           </div>
           <p v-if="form.duplicate_error" class="text-red-500 text-xs mt-1">⚠️ This place is already in the list!</p>
-          <p v-if="form.no_api_key" class="text-amber-500 text-xs mt-1">ℹ️ No API key — please fill in name and address manually.</p>
-          <button v-if="form.looked_up" @click="resetLookup" class="text-xs text-gray-400 hover:text-gray-600 mt-1 underline">Change link</button>
+          <p v-if="form.name_missing" class="text-amber-500 text-xs mt-1">ℹ️ Couldn't extract name — please enter it manually below.</p>
+          <button v-if="form.looked_up" @click="resetLookup" class="text-xs text-gray-400 hover:text-gray-600 mt-1 underline">
+            Change link
+          </button>
         </div>
 
         <!-- Fields shown after lookup -->
         <template v-if="form.looked_up && !form.duplicate_error">
 
-          <!-- Photo preview -->
-          <div v-if="form.photo_reference" class="h-40 rounded-xl overflow-hidden bg-gray-100">
-            <img
-              :src="`${apiBase}/api/photos?ref=${form.photo_reference}`"
-              class="w-full h-full object-cover"
-              @error="e => e.target.parentElement.style.display='none'"
-            />
-          </div>
-
           <!-- Name -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Place Name <span class="text-red-400">*</span></label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Place Name <span class="text-red-400">*</span>
+            </label>
             <input v-model="form.name" type="text"
               class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-orange-400" />
           </div>
@@ -246,7 +215,9 @@
 
           <!-- Parking -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Parking Difficulty <span class="text-red-400">*</span></label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Parking Difficulty <span class="text-red-400">*</span>
+            </label>
             <div class="flex gap-6">
               <label v-for="opt in ['easy', 'hard']" :key="opt" class="flex items-center gap-2 cursor-pointer">
                 <input type="radio" :value="opt" v-model="form.parking_difficulty" class="accent-orange-500" />
@@ -257,7 +228,9 @@
 
           <!-- Days closed -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Closed on (leave blank if open daily)</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Closed on <span class="text-gray-400 font-normal">(leave blank if open daily)</span>
+            </label>
             <div class="flex flex-wrap gap-3">
               <label v-for="day in days" :key="day" class="flex items-center gap-1.5 cursor-pointer select-none">
                 <input type="checkbox" :value="day" v-model="form.days_closed" class="accent-orange-500" />
@@ -268,7 +241,9 @@
 
           <!-- Budget -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Budget per person <span class="text-red-400">*</span></label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Budget per person <span class="text-red-400">*</span>
+            </label>
             <div class="flex items-center gap-2">
               <span class="text-sm font-medium text-gray-500">RM</span>
               <input v-model.number="form.budget_min" type="number" min="0" placeholder="Min"
@@ -289,7 +264,9 @@
 
           <!-- Your name -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Your Name <span class="text-red-400">*</span></label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Your Name <span class="text-red-400">*</span>
+            </label>
             <input v-model="form.submitted_by" type="text" placeholder="e.g. John"
               class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-orange-400" />
           </div>
@@ -355,12 +332,12 @@ createApp({
     );
 
     const makeForm = () => ({
-      maps_url: '', name: '', address: '', photo_reference: null,
+      maps_url: '', name: '', address: '',
       parking_difficulty: 'easy', days_closed: [],
       budget_min: null, budget_max: null,
       has_epp: false, submitted_by: '',
       looked_up: false, looking_up: false,
-      duplicate_error: false, no_api_key: false,
+      duplicate_error: false, name_missing: false,
       submitting: false, success: false, error: '',
     });
 
@@ -404,19 +381,18 @@ createApp({
     }
 
     async function lookupPlace() {
-      form.value.looking_up = true;
+      form.value.looking_up  = true;
       form.value.duplicate_error = false;
-      form.value.no_api_key = false;
-      form.value.error = '';
+      form.value.name_missing    = false;
+      form.value.error           = '';
       try {
         const r = await fetch(`${API_BASE}/api/places/lookup?maps_url=${encodeURIComponent(form.value.maps_url)}`);
         const data = await r.json();
         if (data.is_duplicate) { form.value.duplicate_error = true; return; }
-        form.value.name            = data.name            || '';
-        form.value.address         = data.address         || '';
-        form.value.photo_reference = data.photo_reference || null;
-        form.value.no_api_key      = !data.name;
-        form.value.looked_up       = true;
+        form.value.name    = data.name    || '';
+        form.value.address = data.address || '';
+        form.value.name_missing = !data.name;
+        form.value.looked_up = true;
       } catch {
         form.value.error = 'Lookup failed. Check your connection.';
       } finally {
@@ -435,7 +411,6 @@ createApp({
             name:               form.value.name,
             maps_url:           form.value.maps_url,
             address:            form.value.address,
-            photo_reference:    form.value.photo_reference,
             parking_difficulty: form.value.parking_difficulty,
             days_closed:        form.value.days_closed.join(','),
             budget_min:         form.value.budget_min,
@@ -456,7 +431,7 @@ createApp({
     }
 
     function resetForm()   { form.value = makeForm(); }
-    function resetLookup() { form.value = { ...makeForm(), maps_url: '' }; }
+    function resetLookup() { form.value = makeForm(); }
 
     function parkingBadge(d) {
       return d === 'easy' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700';
@@ -465,7 +440,7 @@ createApp({
     onMounted(() => { fetchToday(); fetchAll(); });
 
     return {
-      currentView, tabs, todayName, days: DAYS, apiBase: API_BASE,
+      currentView, tabs, todayName, days: DAYS,
       allPlaces, todayPlaces, recommended, loading,
       filters, filteredPlaces,
       form, canSubmit,

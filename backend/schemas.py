@@ -8,7 +8,6 @@ class PlaceCreate(BaseModel):
     name: str
     maps_url: str
     address: Optional[str] = None
-    photo_reference: Optional[str] = None
     parking_difficulty: str
     days_closed: str = ""
     budget_min: int
@@ -22,7 +21,6 @@ class PlaceOut(BaseModel):
     name: str
     maps_url: str
     address: Optional[str]
-    photo_reference: Optional[str]
     parking_difficulty: str
     days_closed: str
     budget_min: int
@@ -37,5 +35,4 @@ class PlaceOut(BaseModel):
 class LookupOut(BaseModel):
     name: Optional[str] = None
     address: Optional[str] = None
-    photo_reference: Optional[str] = None
     is_duplicate: bool = False
