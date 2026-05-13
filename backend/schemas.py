@@ -32,6 +32,18 @@ class PlaceOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PlaceUpdate(BaseModel):
+    name: Optional[str] = None
+    maps_url: Optional[str] = None
+    address: Optional[str] = None
+    parking_difficulty: Optional[str] = None
+    days_closed: Optional[str] = None
+    budget_min: Optional[int] = None
+    budget_max: Optional[int] = None
+    has_epp: Optional[bool] = None
+    submitted_by: Optional[str] = None
+
+
 class LookupOut(BaseModel):
     name: Optional[str] = None
     address: Optional[str] = None

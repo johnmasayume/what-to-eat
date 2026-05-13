@@ -156,7 +156,11 @@
             <p v-if="place.days_closed" class="text-gray-400 text-xs mt-1">Closed: {{ place.days_closed }}</p>
             <div class="flex items-center justify-between mt-2">
               <span class="text-gray-300 text-xs">by {{ place.submitted_by }}</span>
-              <a :href="place.maps_url" target="_blank" class="text-blue-400 text-xs hover:underline">📍 Maps</a>
+              <div class="flex items-center gap-2">
+                <a :href="place.maps_url" target="_blank" class="text-blue-400 text-xs hover:underline">📍 Maps</a>
+                <button @click="openEdit(place)" class="text-gray-300 hover:text-orange-500 transition-colors" title="Edit">✏️</button>
+                <button @click="deletePlace(place)" class="text-gray-300 hover:text-red-500 transition-colors" title="Delete">🗑️</button>
+              </div>
             </div>
           </div>
         </div>
@@ -292,6 +296,99 @@
     </div>
 
   </div>
+
+  <!-- Edit Modal -->
+  <div v-if="editTarget" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/40" @click="closeEdit"></div>
+    <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-5 space-y-4">
+
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-gray-800">Edit Place</h3>
+        <button @click="closeEdit" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+      </div>
+
+      <!-- Name -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Place Name <span class="text-red-400">*</span></label>
+        <input v-model="editForm.name" type="text"
+          class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-orange-400" />
+      </div>
+
+      <!-- Maps URL -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Google Maps Link <span class="text-red-400">*</span></label>
+        <input v-model="editForm.maps_url" type="url"
+          class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-orange-400" />
+      </div>
+
+      <!-- Address -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+        <input v-model="editForm.address" type="text"
+          class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-orange-400" />
+      </div>
+
+      <!-- Parking -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Parking Difficulty</label>
+        <div class="flex gap-6">
+          <label v-for="opt in ['easy', 'hard']" :key="opt" class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" :value="opt" v-model="editForm.parking_difficulty" class="accent-orange-500" />
+            <span class="text-sm capitalize">{{ opt }}</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Days closed -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Closed on <span class="text-gray-400 font-normal">(leave blank if open daily)</span>
+        </label>
+        <div class="flex flex-wrap gap-3">
+          <label v-for="day in days" :key="day" class="flex items-center gap-1.5 cursor-pointer select-none">
+            <input type="checkbox" :value="day" v-model="editForm.days_closed" class="accent-orange-500" />
+            <span class="text-sm text-gray-600">{{ day.slice(0, 3) }}</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Budget -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Budget per person</label>
+        <div class="flex items-center gap-2">
+          <span class="text-sm font-medium text-gray-500">RM</span>
+          <input v-model.number="editForm.budget_min" type="number" min="0" placeholder="Min"
+            class="w-24 text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-orange-400" />
+          <span class="text-gray-400">–</span>
+          <input v-model.number="editForm.budget_max" type="number" min="0" placeholder="Max"
+            class="w-24 text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-orange-400" />
+        </div>
+      </div>
+
+      <!-- EPP -->
+      <div>
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+          <input type="checkbox" v-model="editForm.has_epp" class="accent-green-500 w-4 h-4" />
+          <span class="text-sm text-gray-700">Has EPP (company discount benefit)</span>
+        </label>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex gap-3 pt-1">
+        <button
+          @click="saveEdit"
+          :disabled="!canSaveEdit || editForm.saving"
+          class="flex-1 py-2.5 bg-orange-500 text-white text-sm font-semibold rounded-lg hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >{{ editForm.saving ? 'Saving...' : 'Save Changes' }}</button>
+        <button @click="closeEdit" class="px-4 py-2 text-sm text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50">
+          Cancel
+        </button>
+      </div>
+
+      <p v-if="editForm.error" class="text-red-500 text-sm text-center">{{ editForm.error }}</p>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -433,6 +530,79 @@ createApp({
     function resetForm()   { form.value = makeForm(); }
     function resetLookup() { form.value = makeForm(); }
 
+    // --- Edit / Delete ---
+    const editTarget = ref(null);
+    const editForm   = ref(null);
+
+    const canSaveEdit = computed(() =>
+      editForm.value &&
+      editForm.value.name &&
+      editForm.value.maps_url &&
+      editForm.value.parking_difficulty &&
+      editForm.value.budget_min != null &&
+      editForm.value.budget_max != null
+    );
+
+    function openEdit(place) {
+      editTarget.value = place;
+      editForm.value = {
+        name:               place.name,
+        maps_url:           place.maps_url,
+        address:            place.address || '',
+        parking_difficulty: place.parking_difficulty,
+        days_closed:        place.days_closed
+          ? place.days_closed.split(',').map(d => d.trim()).filter(Boolean)
+          : [],
+        budget_min: place.budget_min,
+        budget_max: place.budget_max,
+        has_epp:    place.has_epp,
+        saving: false,
+        error:  '',
+      };
+    }
+
+    function closeEdit() {
+      editTarget.value = null;
+      editForm.value   = null;
+    }
+
+    async function saveEdit() {
+      editForm.value.saving = true;
+      editForm.value.error  = '';
+      try {
+        const r = await fetch(`${API_BASE}/api/places/${editTarget.value.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name:               editForm.value.name,
+            maps_url:           editForm.value.maps_url,
+            address:            editForm.value.address,
+            parking_difficulty: editForm.value.parking_difficulty,
+            days_closed:        editForm.value.days_closed.join(','),
+            budget_min:         editForm.value.budget_min,
+            budget_max:         editForm.value.budget_max,
+            has_epp:            editForm.value.has_epp,
+          }),
+        });
+        if (r.status === 409) { editForm.value.error = 'Another place with this Maps URL already exists!'; return; }
+        if (!r.ok) throw new Error();
+        closeEdit();
+        fetchAll();
+        fetchToday();
+      } catch {
+        if (editForm.value) editForm.value.error = 'Failed to save. Please try again.';
+      } finally {
+        if (editForm.value) editForm.value.saving = false;
+      }
+    }
+
+    async function deletePlace(place) {
+      if (!window.confirm(`Delete "${place.name}"? This cannot be undone.`)) return;
+      await fetch(`${API_BASE}/api/places/${place.id}`, { method: 'DELETE' });
+      fetchAll();
+      fetchToday();
+    }
+
     function parkingBadge(d) {
       return d === 'easy' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700';
     }
@@ -445,6 +615,8 @@ createApp({
       filters, filteredPlaces,
       form, canSubmit,
       pickAgain, lookupPlace, submitPlace, resetForm, resetLookup,
+      editTarget, editForm, canSaveEdit,
+      openEdit, closeEdit, saveEdit, deletePlace,
       parkingBadge,
     };
   }
