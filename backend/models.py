@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, String
+from sqlalchemy import JSON, Boolean, Column, DateTime, Integer, String
 
 from database import Base
 
@@ -19,3 +19,6 @@ class Place(Base):
     has_epp = Column(Boolean, default=False)
     submitted_by = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    notes = Column(String, nullable=True)
+    shop_images = Column(JSON, default=list, nullable=True)
+    menu_images = Column(JSON, default=list, nullable=True)

@@ -5,10 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 import models
-from database import engine
+from database import engine, run_migrations
 from routes.places import router as places_router
 
 models.Base.metadata.create_all(bind=engine)
+run_migrations()
 
 app = FastAPI(title="What to Eat")
 

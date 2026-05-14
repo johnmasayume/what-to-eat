@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class PlaceCreate(BaseModel):
@@ -14,6 +14,9 @@ class PlaceCreate(BaseModel):
     budget_max: int
     has_epp: bool = False
     submitted_by: str
+    notes: Optional[str] = None
+    shop_images: list[str] = []
+    menu_images: list[str] = []
 
 
 class PlaceOut(BaseModel):
@@ -28,8 +31,16 @@ class PlaceOut(BaseModel):
     has_epp: bool
     submitted_by: str
     created_at: datetime
+    notes: Optional[str] = None
+    shop_images: list[str] = []
+    menu_images: list[str] = []
 
     model_config = {"from_attributes": True}
+
+    @field_validator("shop_images", "menu_images", mode="before")
+    @classmethod
+    def ensure_list(cls, v):
+        return v if isinstance(v, list) else []
 
 
 class PlaceUpdate(BaseModel):
@@ -42,6 +53,9 @@ class PlaceUpdate(BaseModel):
     budget_max: Optional[int] = None
     has_epp: Optional[bool] = None
     submitted_by: Optional[str] = None
+    notes: Optional[str] = None
+    shop_images: Optional[list[str]] = None
+    menu_images: Optional[list[str]] = None
 
 
 class LookupOut(BaseModel):

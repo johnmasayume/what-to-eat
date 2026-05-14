@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 DATABASE_URL = "sqlite:///./what_to_eat.db"
@@ -14,3 +14,17 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def run_migrations():
+    with engine.connect() as conn:
+        for ddl in [
+            "ALTER TABLE places ADD COLUMN notes TEXT",
+            "ALTER TABLE places ADD COLUMN shop_images TEXT",
+            "ALTER TABLE places ADD COLUMN menu_images TEXT",
+        ]:
+            try:
+                conn.execute(text(ddl))
+                conn.commit()
+            except Exception:
+                pass  # column already exists

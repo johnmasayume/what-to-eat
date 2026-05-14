@@ -50,7 +50,13 @@
         </div>
 
         <div v-if="recommended" class="bg-white rounded-2xl shadow border border-gray-100 overflow-hidden mb-6">
-          <div class="h-32 bg-orange-50 flex items-center justify-center text-6xl">🍴</div>
+          <div class="h-32 bg-orange-50 flex items-center justify-center text-6xl overflow-hidden relative">
+            <span>🍴</span>
+            <img v-if="mapImageUrl(recommended.maps_url)"
+                 :src="mapImageUrl(recommended.maps_url)"
+                 class="absolute inset-0 w-full h-full object-cover"
+                 @error="e => e.target.style.display='none'">
+          </div>
           <div class="p-4">
             <div class="flex items-start justify-between gap-3">
               <div>
@@ -69,6 +75,13 @@
               <a :href="recommended.maps_url" target="_blank" class="text-blue-500 text-sm hover:underline">📍 Open Maps</a>
             </div>
             <p v-if="recommended.days_closed" class="text-gray-400 text-xs mt-1">Closed: {{ recommended.days_closed }}</p>
+            <p v-if="recommended.notes" class="text-gray-500 text-xs mt-2 italic">{{ recommended.notes }}</p>
+            <div v-if="allImages(recommended).length" class="flex gap-1 mt-2 overflow-x-auto pb-0.5">
+              <a v-for="url in allImages(recommended)" :key="url" :href="url" target="_blank" class="flex-shrink-0">
+                <img :src="url" class="w-12 h-12 object-cover rounded border border-gray-100"
+                     @error="e => e.target.closest('a').style.display='none'">
+              </a>
+            </div>
             <p class="text-gray-300 text-xs mt-1">Added by {{ recommended.submitted_by }}</p>
           </div>
         </div>
@@ -88,7 +101,13 @@
               v-for="place in todayPlaces" :key="place.id"
               class="bg-white rounded-xl border border-gray-100 p-3 flex items-center gap-3"
             >
-              <div class="w-12 h-12 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0 text-xl">🍴</div>
+              <div class="w-12 h-12 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0 text-xl overflow-hidden relative">
+                <span>🍴</span>
+                <img v-if="mapImageUrl(place.maps_url)"
+                     :src="mapImageUrl(place.maps_url)"
+                     class="absolute inset-0 w-full h-full object-cover rounded-lg"
+                     @error="e => e.target.style.display='none'">
+              </div>
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-1.5">
                   <span class="font-semibold text-gray-800 truncate">{{ place.name }}</span>
@@ -101,6 +120,7 @@
                   </span>
                   <a :href="place.maps_url" target="_blank" class="text-blue-400 text-xs hover:underline">Maps</a>
                 </div>
+                <p v-if="place.notes" class="text-gray-400 text-xs mt-0.5 truncate italic">{{ place.notes }}</p>
               </div>
             </div>
           </div>
@@ -130,6 +150,11 @@
           <option value="easy">Easy parking</option>
           <option value="hard">Hard parking</option>
         </select>
+        <div class="flex items-center gap-1.5">
+          <span class="text-sm text-gray-500 whitespace-nowrap">Max RM</span>
+          <input v-model.number="filters.budgetMax" type="number" min="0" placeholder="Any"
+            class="w-20 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-orange-400" />
+        </div>
       </div>
 
       <div v-if="loading.all" class="text-center py-16 text-gray-400">Loading...</div>
@@ -140,7 +165,13 @@
           v-for="place in filteredPlaces" :key="place.id"
           class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
         >
-          <div class="h-28 bg-orange-50 flex items-center justify-center text-5xl">🍴</div>
+          <div class="h-28 bg-orange-50 flex items-center justify-center text-5xl overflow-hidden relative">
+            <span>🍴</span>
+            <img v-if="mapImageUrl(place.maps_url)"
+                 :src="mapImageUrl(place.maps_url)"
+                 class="absolute inset-0 w-full h-full object-cover"
+                 @error="e => e.target.style.display='none'">
+          </div>
           <div class="p-3">
             <div class="flex items-start justify-between gap-1">
               <h4 class="font-semibold text-gray-800">{{ place.name }}</h4>
@@ -154,6 +185,17 @@
               </span>
             </div>
             <p v-if="place.days_closed" class="text-gray-400 text-xs mt-1">Closed: {{ place.days_closed }}</p>
+            <p v-if="place.notes" class="text-gray-500 text-xs mt-1 italic line-clamp-2">{{ place.notes }}</p>
+            <div v-if="allImages(place).length" class="flex gap-1 mt-2 overflow-x-auto pb-0.5">
+              <a v-for="url in allImages(place).slice(0, 5)" :key="url" :href="url" target="_blank" class="flex-shrink-0">
+                <img :src="url" class="w-10 h-10 object-cover rounded border border-gray-100"
+                     @error="e => e.target.closest('a').style.display='none'">
+              </a>
+              <span v-if="allImages(place).length > 5"
+                    class="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400 flex-shrink-0">
+                +{{ allImages(place).length - 5 }}
+              </span>
+            </div>
             <div class="flex items-center justify-between mt-2">
               <span class="text-gray-300 text-xs">by {{ place.submitted_by }}</span>
               <div class="flex items-center gap-2">
@@ -266,6 +308,45 @@
             </label>
           </div>
 
+          <!-- Notes -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Notes <span class="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <textarea v-model="form.notes" rows="2" placeholder="e.g. Cash only, parking at the back, crowded after 1pm..."
+              class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-orange-400 resize-none"></textarea>
+          </div>
+
+          <!-- Shop Photos -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Shop Photos <span class="text-gray-400 font-normal">(optional, paste image URLs)</span>
+            </label>
+            <div v-for="(_, i) in form.shop_images" :key="i" class="flex gap-2 mb-1.5">
+              <input v-model="form.shop_images[i]" type="url" placeholder="https://..."
+                class="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-orange-400" />
+              <button @click="form.shop_images.splice(i, 1)"
+                class="text-gray-300 hover:text-red-400 text-xl leading-none px-1">×</button>
+            </div>
+            <button @click="form.shop_images.push('')"
+              class="text-sm text-orange-500 hover:text-orange-600 font-medium">+ Add photo</button>
+          </div>
+
+          <!-- Menu Photos -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Menu Photos <span class="text-gray-400 font-normal">(optional, paste image URLs)</span>
+            </label>
+            <div v-for="(_, i) in form.menu_images" :key="i" class="flex gap-2 mb-1.5">
+              <input v-model="form.menu_images[i]" type="url" placeholder="https://..."
+                class="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-orange-400" />
+              <button @click="form.menu_images.splice(i, 1)"
+                class="text-gray-300 hover:text-red-400 text-xl leading-none px-1">×</button>
+            </div>
+            <button @click="form.menu_images.push('')"
+              class="text-sm text-orange-500 hover:text-orange-600 font-medium">+ Add photo</button>
+          </div>
+
           <!-- Your name -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -373,6 +454,39 @@
         </label>
       </div>
 
+      <!-- Notes -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Notes <span class="text-gray-400 font-normal">(optional)</span></label>
+        <textarea v-model="editForm.notes" rows="2" placeholder="e.g. Cash only, parking at the back..."
+          class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-orange-400 resize-none"></textarea>
+      </div>
+
+      <!-- Shop Photos -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Shop Photos <span class="text-gray-400 font-normal">(optional)</span></label>
+        <div v-for="(_, i) in editForm.shop_images" :key="i" class="flex gap-2 mb-1.5">
+          <input v-model="editForm.shop_images[i]" type="url" placeholder="https://..."
+            class="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-orange-400" />
+          <button @click="editForm.shop_images.splice(i, 1)"
+            class="text-gray-300 hover:text-red-400 text-xl leading-none px-1">×</button>
+        </div>
+        <button @click="editForm.shop_images.push('')"
+          class="text-sm text-orange-500 hover:text-orange-600 font-medium">+ Add photo</button>
+      </div>
+
+      <!-- Menu Photos -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Menu Photos <span class="text-gray-400 font-normal">(optional)</span></label>
+        <div v-for="(_, i) in editForm.menu_images" :key="i" class="flex gap-2 mb-1.5">
+          <input v-model="editForm.menu_images[i]" type="url" placeholder="https://..."
+            class="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-orange-400" />
+          <button @click="editForm.menu_images.splice(i, 1)"
+            class="text-gray-300 hover:text-red-400 text-xl leading-none px-1">×</button>
+        </div>
+        <button @click="editForm.menu_images.push('')"
+          class="text-sm text-orange-500 hover:text-orange-600 font-medium">+ Add photo</button>
+      </div>
+
       <!-- Actions -->
       <div class="flex gap-3 pt-1">
         <button
@@ -414,12 +528,15 @@ createApp({
     const todayPlaces = ref([]);
     const recommended = ref(null);
     const loading     = ref({ today: false, all: false });
-    const filters     = ref({ search: '', eppOnly: false, parking: '' });
+    const filters     = ref({ search: '', eppOnly: false, parking: '', budgetMax: '' });
 
     const filteredPlaces = computed(() =>
       allPlaces.value.filter(p => {
         if (filters.value.eppOnly && !p.has_epp) return false;
         if (filters.value.parking && p.parking_difficulty !== filters.value.parking) return false;
+        if (filters.value.budgetMax !== '' && filters.value.budgetMax != null) {
+          if (p.budget_min > filters.value.budgetMax) return false;
+        }
         if (filters.value.search) {
           const q = filters.value.search.toLowerCase();
           if (!p.name.toLowerCase().includes(q) && !(p.address || '').toLowerCase().includes(q)) return false;
@@ -433,6 +550,7 @@ createApp({
       parking_difficulty: 'easy', days_closed: [],
       budget_min: null, budget_max: null,
       has_epp: false, submitted_by: '',
+      notes: '', shop_images: [], menu_images: [],
       looked_up: false, looking_up: false,
       duplicate_error: false, name_missing: false,
       submitting: false, success: false, error: '',
@@ -514,6 +632,9 @@ createApp({
             budget_max:         form.value.budget_max,
             has_epp:            form.value.has_epp,
             submitted_by:       form.value.submitted_by,
+            notes:              form.value.notes || null,
+            shop_images:        form.value.shop_images.filter(u => u.trim()),
+            menu_images:        form.value.menu_images.filter(u => u.trim()),
           }),
         });
         if (r.status === 409) { form.value.error = 'This place already exists!'; return; }
@@ -553,9 +674,12 @@ createApp({
         days_closed:        place.days_closed
           ? place.days_closed.split(',').map(d => d.trim()).filter(Boolean)
           : [],
-        budget_min: place.budget_min,
-        budget_max: place.budget_max,
-        has_epp:    place.has_epp,
+        budget_min:   place.budget_min,
+        budget_max:   place.budget_max,
+        has_epp:      place.has_epp,
+        notes:        place.notes || '',
+        shop_images:  [...(place.shop_images || [])],
+        menu_images:  [...(place.menu_images || [])],
         saving: false,
         error:  '',
       };
@@ -582,6 +706,9 @@ createApp({
             budget_min:         editForm.value.budget_min,
             budget_max:         editForm.value.budget_max,
             has_epp:            editForm.value.has_epp,
+            notes:              editForm.value.notes || null,
+            shop_images:        editForm.value.shop_images.filter(u => u.trim()),
+            menu_images:        editForm.value.menu_images.filter(u => u.trim()),
           }),
         });
         if (r.status === 409) { editForm.value.error = 'Another place with this Maps URL already exists!'; return; }
@@ -603,6 +730,22 @@ createApp({
       fetchToday();
     }
 
+    function allImages(place) {
+      return [...(place.shop_images || []), ...(place.menu_images || [])].filter(Boolean);
+    }
+
+    function mapImageUrl(mapsUrl) {
+      if (!mapsUrl) return null;
+      const m = mapsUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+      if (!m) return null;
+      const lat = parseFloat(m[1]), lon = parseFloat(m[2]), z = 17;
+      const n = 2 ** z;
+      const x = Math.floor((lon + 180) / 360 * n);
+      const latR = lat * Math.PI / 180;
+      const y = Math.floor((1 - Math.log(Math.tan(latR) + 1 / Math.cos(latR)) / Math.PI) / 2 * n);
+      return `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
+    }
+
     function parkingBadge(d) {
       return d === 'easy' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700';
     }
@@ -617,7 +760,7 @@ createApp({
       pickAgain, lookupPlace, submitPlace, resetForm, resetLookup,
       editTarget, editForm, canSaveEdit,
       openEdit, closeEdit, saveEdit, deletePlace,
-      parkingBadge,
+      allImages, mapImageUrl, parkingBadge,
     };
   }
 }).mount('#app');

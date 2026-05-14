@@ -1,6 +1,9 @@
 import random
 from datetime import datetime
 from typing import Optional
+from zoneinfo import ZoneInfo
+
+MYT = ZoneInfo("Asia/Kuala_Lumpur")
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -14,7 +17,7 @@ router = APIRouter(prefix="/api/places", tags=["places"])
 
 
 def today_name() -> str:
-    return datetime.now().strftime("%A")
+    return datetime.now(MYT).strftime("%A")
 
 
 def is_open(place: Place) -> bool:
