@@ -37,8 +37,12 @@ def list_today(db: Session = Depends(get_db)):
 
 
 @router.get("/recommend", response_model=Optional[PlaceOut])
-def recommend(db: Session = Depends(get_db)):
+def recommend(country: Optional[str] = Query(None), db: Session = Depends(get_db)):
     open_places = [p for p in db.query(Place).all() if is_open(p)]
+    if country:
+        filtered = [p for p in open_places if p.country == country]
+        if filtered:
+            open_places = filtered
     return random.choice(open_places) if open_places else None
 
 

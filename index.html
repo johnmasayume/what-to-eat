@@ -571,6 +571,7 @@ createApp({
     const todayPlaces = ref([]);
     const recommended = ref(null);
     const loading     = ref({ today: false, all: false });
+    const userCountry = ref('');
     const filters     = ref({ search: '', eppOnly: false, parking: '', budgetMax: '', country: '' });
 
     const PAGE_SIZE = 10;
@@ -636,9 +637,10 @@ createApp({
     async function fetchToday() {
       loading.value.today = true;
       try {
+        const countryParam = userCountry.value ? `?country=${encodeURIComponent(userCountry.value)}` : '';
         const [tr, rr] = await Promise.all([
           fetch(`${API_BASE}/api/places/today`),
-          fetch(`${API_BASE}/api/places/recommend`),
+          fetch(`${API_BASE}/api/places/recommend${countryParam}`),
         ]);
         todayPlaces.value = await tr.json();
         recommended.value = await rr.json();
@@ -658,7 +660,8 @@ createApp({
     }
 
     async function pickAgain() {
-      const r = await fetch(`${API_BASE}/api/places/recommend`);
+      const countryParam = userCountry.value ? `?country=${encodeURIComponent(userCountry.value)}` : '';
+      const r = await fetch(`${API_BASE}/api/places/recommend${countryParam}`);
       recommended.value = await r.json();
     }
 
@@ -824,7 +827,15 @@ createApp({
 
     watch(currentView, (v) => { if (v === 'today') fetchToday(); });
 
-    onMounted(() => { fetchToday(); fetchAll(); });
+    onMounted(async () => {
+      try {
+        const r = await fetch('https://ipapi.co/json/');
+        const data = await r.json();
+        if (data.country_name) userCountry.value = data.country_name;
+      } catch {}
+      fetchToday();
+      fetchAll();
+    });
 
     return {
       currentView, tabs, todayName, days: DAYS,
