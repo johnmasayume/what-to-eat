@@ -65,4 +65,5 @@ class LookupOut(BaseModel):
     name: Optional[str] = None
     address: Optional[str] = None
     country: Optional[str] = None
+    canonical_url: Optional[str] = None
     is_duplicate: bool = False

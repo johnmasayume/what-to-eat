@@ -60,4 +60,4 @@ async def lookup_place(maps_url: str) -> dict:
         address = geo["address"]
         country = geo["country"]
 
-    return {"name": name, "address": address, "country": country}
+    return {"name": name, "address": address, "country": country, "canonical_url": canonical}

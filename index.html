@@ -671,6 +671,7 @@ createApp({
         const r = await fetch(`${API_BASE}/api/places/lookup?maps_url=${encodeURIComponent(form.value.maps_url)}`);
         const data = await r.json();
         if (data.is_duplicate) { form.value.duplicate_error = true; return; }
+        form.value.maps_url = data.canonical_url || form.value.maps_url;
         form.value.name    = data.name    || '';
         form.value.address = data.address || '';
         form.value.country = data.country || '';
