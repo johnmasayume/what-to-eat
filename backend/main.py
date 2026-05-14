@@ -29,3 +29,7 @@ if os.path.isdir(_frontend):
     @app.get("/")
     def index():
         return FileResponse(os.path.join(_frontend, "index.html"))
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)

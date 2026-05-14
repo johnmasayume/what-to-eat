@@ -20,5 +20,6 @@ class Place(Base):
     submitted_by = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     notes = Column(String, nullable=True)
+    country = Column(String, nullable=True)
     shop_images = Column(JSON, default=list, nullable=True)
     menu_images = Column(JSON, default=list, nullable=True)

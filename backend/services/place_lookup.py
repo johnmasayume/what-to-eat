@@ -31,7 +31,7 @@ def _extract_coords(url: str) -> Optional[tuple[float, float]]:
     return (float(m.group(1)), float(m.group(2))) if m else None
 
 
-async def _reverse_geocode(lat: float, lng: float) -> Optional[str]:
+async def _reverse_geocode(lat: float, lng: float) -> dict:
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             r = await client.get(
@@ -39,9 +39,13 @@ async def _reverse_geocode(lat: float, lng: float) -> Optional[str]:
                 params={"lat": lat, "lon": lng, "format": "json"},
                 headers=_HEADERS,
             )
-        return r.json().get("display_name")
+        data = r.json()
+        return {
+            "address": data.get("display_name"),
+            "country": data.get("address", {}).get("country"),
+        }
     except Exception:
-        return None
+        return {"address": None, "country": None}
 
 
 async def lookup_place(maps_url: str) -> dict:
@@ -49,8 +53,11 @@ async def lookup_place(maps_url: str) -> dict:
     name = _extract_name(canonical)
 
     address = None
+    country = None
     coords = _extract_coords(canonical)
     if coords:
-        address = await _reverse_geocode(*coords)
+        geo = await _reverse_geocode(*coords)
+        address = geo["address"]
+        country = geo["country"]
 
-    return {"name": name, "address": address}
+    return {"name": name, "address": address, "country": country}

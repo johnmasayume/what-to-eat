@@ -119,6 +119,7 @@
                     🅿 {{ place.parking_difficulty === 'easy' ? 'Easy' : 'Hard' }}
                   </span>
                   <a :href="place.maps_url" target="_blank" class="text-blue-400 text-xs hover:underline">Maps</a>
+                  <span v-if="place.country" class="text-gray-400 text-xs">{{ place.country }}</span>
                 </div>
                 <p v-if="place.notes" class="text-gray-400 text-xs mt-0.5 truncate italic">{{ place.notes }}</p>
               </div>
@@ -166,6 +167,11 @@
           <input v-model.number="filters.budgetMax" type="number" min="0" placeholder="Any"
             class="w-20 text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-orange-400" />
         </div>
+        <select v-if="availableCountries.length > 1" v-model="filters.country"
+          class="text-sm border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-orange-400 bg-white">
+          <option value="">All countries</option>
+          <option v-for="c in availableCountries" :key="c" :value="c">{{ c }}</option>
+        </select>
       </div>
 
       <div v-if="loading.all" class="text-center py-16 text-gray-400">Loading...</div>
@@ -196,6 +202,7 @@
               </span>
             </div>
             <p v-if="place.days_closed" class="text-gray-400 text-xs mt-1">Closed: {{ place.days_closed }}</p>
+            <p v-if="place.country" class="text-gray-400 text-xs mt-1">📍 {{ place.country }}</p>
             <p v-if="place.notes" class="text-gray-500 text-xs mt-1 italic line-clamp-2">{{ place.notes }}</p>
             <div v-if="allImages(place).length" class="flex gap-1 mt-2 overflow-x-auto pb-0.5">
               <a v-for="url in allImages(place).slice(0, 5)" :key="url" :href="url" target="_blank" class="flex-shrink-0">
@@ -278,6 +285,13 @@
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
             <input v-model="form.address" type="text"
+              class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-orange-400" />
+          </div>
+
+          <!-- Country -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Country</label>
+            <input v-model="form.country" type="text" placeholder="e.g. Malaysia, Japan"
               class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-orange-400" />
           </div>
 
@@ -431,6 +445,13 @@
           class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-orange-400" />
       </div>
 
+      <!-- Country -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Country</label>
+        <input v-model="editForm.country" type="text" placeholder="e.g. Malaysia, Japan"
+          class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-orange-400" />
+      </div>
+
       <!-- Parking -->
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-2">Parking Difficulty</label>
@@ -550,7 +571,7 @@ createApp({
     const todayPlaces = ref([]);
     const recommended = ref(null);
     const loading     = ref({ today: false, all: false });
-    const filters     = ref({ search: '', eppOnly: false, parking: '', budgetMax: '' });
+    const filters     = ref({ search: '', eppOnly: false, parking: '', budgetMax: '', country: '' });
 
     const PAGE_SIZE = 10;
     const todayPage = ref(1);
@@ -563,6 +584,7 @@ createApp({
         if (filters.value.budgetMax !== '' && filters.value.budgetMax != null) {
           if (p.budget_min > filters.value.budgetMax) return false;
         }
+        if (filters.value.country && p.country !== filters.value.country) return false;
         if (filters.value.search) {
           const q = filters.value.search.toLowerCase();
           if (!p.name.toLowerCase().includes(q) && !(p.address || '').toLowerCase().includes(q)) return false;
@@ -570,6 +592,11 @@ createApp({
         return true;
       })
     );
+
+    const availableCountries = computed(() => {
+      const set = new Set(allPlaces.value.map(p => p.country).filter(Boolean));
+      return [...set].sort();
+    });
 
     const pagedTodayPlaces = computed(() => {
       const start = (todayPage.value - 1) * PAGE_SIZE;
@@ -586,7 +613,7 @@ createApp({
     watch(filters, () => { allPage.value = 1; }, { deep: true });
 
     const makeForm = () => ({
-      maps_url: '', name: '', address: '',
+      maps_url: '', name: '', address: '', country: '',
       parking_difficulty: 'easy', days_closed: [],
       budget_min: null, budget_max: null,
       has_epp: false, submitted_by: '',
@@ -646,6 +673,7 @@ createApp({
         if (data.is_duplicate) { form.value.duplicate_error = true; return; }
         form.value.name    = data.name    || '';
         form.value.address = data.address || '';
+        form.value.country = data.country || '';
         form.value.name_missing = !data.name;
         form.value.looked_up = true;
       } catch {
@@ -673,6 +701,7 @@ createApp({
             has_epp:            form.value.has_epp,
             submitted_by:       form.value.submitted_by,
             notes:              form.value.notes || null,
+            country:            form.value.country || null,
             shop_images:        form.value.shop_images.filter(u => u.trim()),
             menu_images:        form.value.menu_images.filter(u => u.trim()),
           }),
@@ -710,6 +739,7 @@ createApp({
         name:               place.name,
         maps_url:           place.maps_url,
         address:            place.address || '',
+        country:            place.country || '',
         parking_difficulty: place.parking_difficulty,
         days_closed:        place.days_closed
           ? place.days_closed.split(',').map(d => d.trim()).filter(Boolean)
@@ -741,6 +771,7 @@ createApp({
             name:               editForm.value.name,
             maps_url:           editForm.value.maps_url,
             address:            editForm.value.address,
+            country:            editForm.value.country || null,
             parking_difficulty: editForm.value.parking_difficulty,
             days_closed:        editForm.value.days_closed.join(','),
             budget_min:         editForm.value.budget_min,
@@ -795,7 +826,7 @@ createApp({
     return {
       currentView, tabs, todayName, days: DAYS,
       allPlaces, todayPlaces, recommended, loading,
-      filters, filteredPlaces,
+      filters, filteredPlaces, availableCountries,
       todayPage, todayTotalPages, pagedTodayPlaces,
       allPage, allTotalPages, pagedFilteredPlaces,
       form, canSubmit,

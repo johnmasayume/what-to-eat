@@ -15,6 +15,7 @@ class PlaceCreate(BaseModel):
     has_epp: bool = False
     submitted_by: str
     notes: Optional[str] = None
+    country: Optional[str] = None
     shop_images: list[str] = []
     menu_images: list[str] = []
 
@@ -32,6 +33,7 @@ class PlaceOut(BaseModel):
     submitted_by: str
     created_at: datetime
     notes: Optional[str] = None
+    country: Optional[str] = None
     shop_images: list[str] = []
     menu_images: list[str] = []
 
@@ -54,6 +56,7 @@ class PlaceUpdate(BaseModel):
     has_epp: Optional[bool] = None
     submitted_by: Optional[str] = None
     notes: Optional[str] = None
+    country: Optional[str] = None
     shop_images: Optional[list[str]] = None
     menu_images: Optional[list[str]] = None
 
@@ -61,4 +64,5 @@ class PlaceUpdate(BaseModel):
 class LookupOut(BaseModel):
     name: Optional[str] = None
     address: Optional[str] = None
+    country: Optional[str] = None
     is_duplicate: bool = False

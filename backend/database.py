@@ -22,6 +22,7 @@ def run_migrations():
             "ALTER TABLE places ADD COLUMN notes TEXT",
             "ALTER TABLE places ADD COLUMN shop_images TEXT",
             "ALTER TABLE places ADD COLUMN menu_images TEXT",
+            "ALTER TABLE places ADD COLUMN country TEXT",
         ]:
             try:
                 conn.execute(text(ddl))
