@@ -98,7 +98,7 @@
           </h3>
           <div class="space-y-2">
             <div
-              v-for="place in todayPlaces" :key="place.id"
+              v-for="place in pagedTodayPlaces" :key="place.id"
               class="bg-white rounded-xl border border-gray-100 p-3 flex items-center gap-3"
             >
               <div class="w-12 h-12 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0 text-xl overflow-hidden relative">
@@ -123,6 +123,17 @@
                 <p v-if="place.notes" class="text-gray-400 text-xs mt-0.5 truncate italic">{{ place.notes }}</p>
               </div>
             </div>
+          </div>
+          <div v-if="todayTotalPages > 1" class="flex items-center justify-center gap-3 mt-4">
+            <button @click="todayPage--" :disabled="todayPage === 1"
+              class="px-3 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              ← Prev
+            </button>
+            <span class="text-sm text-gray-500">{{ todayPage }} / {{ todayTotalPages }}</span>
+            <button @click="todayPage++" :disabled="todayPage === todayTotalPages"
+              class="px-3 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              Next →
+            </button>
           </div>
         </div>
       </div>
@@ -162,7 +173,7 @@
 
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div
-          v-for="place in filteredPlaces" :key="place.id"
+          v-for="place in pagedFilteredPlaces" :key="place.id"
           class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
         >
           <div class="h-28 bg-orange-50 flex items-center justify-center text-5xl overflow-hidden relative">
@@ -206,6 +217,17 @@
             </div>
           </div>
         </div>
+      </div>
+      <div v-if="!loading.all && allTotalPages > 1" class="flex items-center justify-center gap-3 mt-6">
+        <button @click="allPage--" :disabled="allPage === 1"
+          class="px-3 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          ← Prev
+        </button>
+        <span class="text-sm text-gray-500">{{ allPage }} / {{ allTotalPages }}</span>
+        <button @click="allPage++" :disabled="allPage === allTotalPages"
+          class="px-3 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          Next →
+        </button>
       </div>
     </div>
 
@@ -506,7 +528,7 @@
 </div>
 
 <script>
-const { createApp, ref, computed, onMounted } = Vue;
+const { createApp, ref, computed, watch, onMounted } = Vue;
 
 const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? `http://${window.location.host}`
@@ -530,6 +552,10 @@ createApp({
     const loading     = ref({ today: false, all: false });
     const filters     = ref({ search: '', eppOnly: false, parking: '', budgetMax: '' });
 
+    const PAGE_SIZE = 10;
+    const todayPage = ref(1);
+    const allPage   = ref(1);
+
     const filteredPlaces = computed(() =>
       allPlaces.value.filter(p => {
         if (filters.value.eppOnly && !p.has_epp) return false;
@@ -544,6 +570,20 @@ createApp({
         return true;
       })
     );
+
+    const pagedTodayPlaces = computed(() => {
+      const start = (todayPage.value - 1) * PAGE_SIZE;
+      return todayPlaces.value.slice(start, start + PAGE_SIZE);
+    });
+    const todayTotalPages = computed(() => Math.max(1, Math.ceil(todayPlaces.value.length / PAGE_SIZE)));
+
+    const pagedFilteredPlaces = computed(() => {
+      const start = (allPage.value - 1) * PAGE_SIZE;
+      return filteredPlaces.value.slice(start, start + PAGE_SIZE);
+    });
+    const allTotalPages = computed(() => Math.max(1, Math.ceil(filteredPlaces.value.length / PAGE_SIZE)));
+
+    watch(filters, () => { allPage.value = 1; }, { deep: true });
 
     const makeForm = () => ({
       maps_url: '', name: '', address: '',
@@ -756,6 +796,8 @@ createApp({
       currentView, tabs, todayName, days: DAYS,
       allPlaces, todayPlaces, recommended, loading,
       filters, filteredPlaces,
+      todayPage, todayTotalPages, pagedTodayPlaces,
+      allPage, allTotalPages, pagedFilteredPlaces,
       form, canSubmit,
       pickAgain, lookupPlace, submitPlace, resetForm, resetLookup,
       editTarget, editForm, canSaveEdit,
