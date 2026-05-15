@@ -1,15 +1,25 @@
 # Backend
 
-FastAPI + SQLAlchemy + SQLite. Runs on a home server behind Caddy (HTTPS + DDNS).
+FastAPI + SQLAlchemy + SQLite. Runs on a home server exposed via Tailscale Funnel (HTTPS).
 
 ## Run locally
 
 ```bash
 cd backend
-uvicorn main:app --reload
-# API at http://localhost:8000
+uvicorn main:app --reload --port 9912
+# API at http://localhost:9912
 # Also serves frontend/index.html at GET /
 ```
+
+## Production hosting
+
+Tailscale Funnel proxies port 9912 to a public HTTPS URL:
+
+```bash
+tailscale funnel 9912
+```
+
+No Caddy, no port-forward, no router config needed.
 
 ## File map
 
@@ -60,8 +70,8 @@ SQLite file: `backend/what_to_eat.db`
 |--------|------|-------|
 | GET | `/api/places/` | All places, newest first |
 | GET | `/api/places/today` | Filtered by `is_open()` — today not in days_closed |
-| GET | `/api/places/recommend` | Random single place open today, or `null` |
-| GET | `/api/places/lookup?maps_url=` | Returns `{name, address, is_duplicate}`. Used before add form shows. |
+| GET | `/api/places/recommend?country=` | Random place open today, filtered by country if provided. Falls back to all if no match. |
+| GET | `/api/places/lookup?maps_url=` | Returns `{name, address, canonical_url, is_duplicate}`. Used before add form shows. |
 | POST | `/api/places/` | 409 if maps_url already exists |
 | PUT | `/api/places/{id}` | Partial update via `exclude_unset=True`. 409 on maps_url conflict. |
 | DELETE | `/api/places/{id}` | 204 no content |
@@ -76,7 +86,9 @@ Route order matters in FastAPI: `/today`, `/recommend`, `/lookup` are registered
 2. Extract place name from `/maps/place/<name>/` path segment
 3. Extract `@lat,lon` from URL with regex
 4. Call Nominatim reverse geocode to get human-readable address
-5. Return `{name, address, is_duplicate: false}` (or `{is_duplicate: true}` if maps_url already in DB)
+5. Return `{name, address, canonical_url, is_duplicate: false}` (or `{is_duplicate: true}` if maps_url already in DB)
+
+`canonical_url` is the resolved URL with place name + place ID — frontend stores this instead of the raw input so Maps links open the full place card with images.
 
 Nominatim requires a `User-Agent` header — set to `what-to-eat-app/1.0 (internal lunch picker)`.
 
@@ -94,6 +106,9 @@ uvicorn
 sqlalchemy
 pydantic
 httpx
+tzdata
 ```
+
+`tzdata` required on Windows — `zoneinfo` has no bundled timezone data there. Install: `pip install tzdata`.
 
 No external API keys. No paid services.

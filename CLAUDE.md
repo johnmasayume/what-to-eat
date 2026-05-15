@@ -6,8 +6,8 @@ A lunch place picker for the team — crowdsourced restaurant entries with daily
 
 ```bash
 cd backend
-uvicorn main:app --reload
-# visit http://localhost:8000
+uvicorn main:app --reload --port 9912
+# visit http://localhost:9912
 ```
 
 ## Structure
@@ -30,16 +30,17 @@ Vue 3 via CDN + Tailwind via CDN. Single file: `frontend/index.html`. No build s
 ## Hosting
 
 - **Local dev**: served by FastAPI at `GET /` (backend reads `../frontend/index.html`)
-- **Production**: hosted on GitHub Pages — push `frontend/index.html` to the `gh-pages` branch (or configure Pages to serve from `/frontend`)
+- **Production frontend**: GitHub Pages — `index.html` on `gh-pages` branch
+- **Production backend**: home server exposed via Tailscale Funnel on port 9912
 
-Before deploying to GitHub Pages, replace `YOUR_DDNS_DOMAIN_HERE` in `index.html` with the actual DDNS domain.
+Replace `YOUR_DDNS_DOMAIN_HERE` in `index.html` with the Tailscale Funnel public URL before deploying to GitHub Pages.
 
 ## API base URL
 
 ```javascript
 const API_BASE = (hostname === 'localhost' || hostname === '127.0.0.1')
   ? `http://${window.location.host}`   // local dev → same host as uvicorn
-  : 'https://YOUR_DDNS_DOMAIN_HERE';   // production → home server
+  : 'https://YOUR_DDNS_DOMAIN_HERE';   // production → Tailscale Funnel URL
 ```
 
 ## Views
@@ -59,17 +60,20 @@ All state is Vue 3 `ref` / `computed`. Nothing persisted client-side beyond the 
 Key refs:
 - `allPlaces` — full list from `GET /api/places/`
 - `todayPlaces` — list from `GET /api/places/today`
-- `recommended` — single place from `GET /api/places/recommend`, or `null`
+- `recommended` — single place from `GET /api/places/recommend?country=`, or `null`
+- `userCountry` — auto-detected via `ipapi.co/json/` on mount; passed to recommend endpoint
 - `filters` — `{ search, eppOnly, parking, budgetMax }` for the All Places view
 - `form` — add-place form state (see `makeForm()`)
 - `editTarget` / `editForm` — controls the edit modal
 
+`fetchToday()` is called on mount, on tab switch to `today`, and after add/edit/delete. Switching to Today's Picks tab always fetches fresh data.
+
 ## Add place form flow
 
 1. User pastes a Google Maps URL and clicks **Lookup**
-2. `GET /api/places/lookup?maps_url=...` — returns `{name, address, is_duplicate}`
+2. `GET /api/places/lookup?maps_url=...` — returns `{name, address, canonical_url, is_duplicate}`
 3. If duplicate → show error, block form
-4. If success → `form.looked_up = true`, rest of form reveals
+4. If success → `form.maps_url` updated to `canonical_url` (ensures place card + images work in Maps), rest of form reveals
 5. User fills in the remaining fields and submits
 6. On success → redirect to All Places tab
 

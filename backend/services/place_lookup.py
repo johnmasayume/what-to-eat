@@ -50,14 +50,17 @@ async def _reverse_geocode(lat: float, lng: float) -> dict:
 
 async def lookup_place(maps_url: str) -> dict:
     canonical = await _resolve_url(maps_url)
-    name = _extract_name(canonical)
+    # Google may redirect to consent page — extract from original URL first
+    name = _extract_name(maps_url) or _extract_name(canonical)
+    coords = _extract_coords(maps_url) or _extract_coords(canonical)
+    # Only use canonical if it's still a Maps URL (not consent redirect)
+    resolved = canonical if "google.com/maps" in canonical else maps_url
 
     address = None
     country = None
-    coords = _extract_coords(canonical)
     if coords:
         geo = await _reverse_geocode(*coords)
         address = geo["address"]
         country = geo["country"]
 
-    return {"name": name, "address": address, "country": country, "canonical_url": canonical}
+    return {"name": name, "address": address, "country": country, "canonical_url": resolved}
